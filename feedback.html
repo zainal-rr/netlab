@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NetLab — Feedback</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<script src="js/nav.js" defer></script>
+
+<div class="page">
+<div class="page-inner" style="max-width:860px;">
+
+  <!-- Header -->
+  <div style="text-align:center;margin-bottom:60px;">
+    <h1 style="font-size:2.8rem;font-weight:900;letter-spacing:-0.04em;margin-bottom:12px;">
+      Help us get better
+    </h1>
+    <p style="color:var(--text2);font-size:1rem;line-height:1.65;max-width:480px;margin:0 auto;">
+      Bug report, router URL contribution, feature idea, or just want to say hi — we read everything.
+    </p>
+  </div>
+
+  <!-- Three paths -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:40px;">
+
+    <button onclick="selectType('bug')" class="type-card" id="type-bug">
+      <div class="type-icon">🐛</div>
+      <div class="type-title">Bug Report</div>
+      <div class="type-desc">Something broke or gave the wrong diagnosis</div>
+    </button>
+
+    <button onclick="selectType('router')" class="type-card" id="type-router">
+      <div class="type-icon">📡</div>
+      <div class="type-title">Router URL</div>
+      <div class="type-desc">Know your router's log URL? Help others find it</div>
+    </button>
+
+    <button onclick="selectType('idea')" class="type-card" id="type-idea">
+      <div class="type-icon">💡</div>
+      <div class="type-title">Feature Idea</div>
+      <div class="type-desc">Something you wish NetLab could do</div>
+    </button>
+
+  </div>
+
+  <!-- Form -->
+  <div class="step-card" id="form-card">
+
+    <!-- Bug report fields -->
+    <div id="fields-bug" class="form-fields" style="display:none;">
+      <div class="field-group">
+        <label class="field-label">What happened?</label>
+        <textarea class="field-input" rows="3" placeholder="Describe what went wrong. What did you expect vs what actually happened?"></textarea>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Router brand / model <span class="field-optional">optional</span></label>
+        <input type="text" class="field-input" placeholder="e.g. TP-Link Archer AX73"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Paste the logs that caused the issue <span class="field-optional">optional</span></label>
+        <textarea class="field-input field-mono" rows="5" placeholder="Paste router log lines here..."></textarea>
+      </div>
+    </div>
+
+    <!-- Router URL fields -->
+    <div id="fields-router" class="form-fields" style="display:none;">
+      <div style="background:var(--accent-lo);border:1px solid rgba(79,142,247,0.2);border-radius:var(--r);padding:14px 16px;font-size:0.82rem;color:var(--text2);margin-bottom:20px;line-height:1.65;">
+        💙 Router URL contributions go directly into <code style="color:var(--accent);font-family:var(--mono);">router-db.json</code> and help everyone who has the same router model. Thank you.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="field-group">
+          <label class="field-label">Router brand</label>
+          <input type="text" class="field-input" placeholder="e.g. TP-Link"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Router model</label>
+          <input type="text" class="field-input" placeholder="e.g. Archer BE800"/>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Log page URL</label>
+        <input type="text" class="field-input field-mono" placeholder="e.g. /cgi-bin/log_syslog.asp"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Firmware version <span class="field-optional">optional</span></label>
+        <input type="text" class="field-input" placeholder="e.g. 1.3.2"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label">ISP <span class="field-optional">optional</span></label>
+        <input type="text" class="field-input" placeholder="e.g. Unifi, Maxis, Time"/>
+      </div>
+    </div>
+
+    <!-- Feature idea fields -->
+    <div id="fields-idea" class="form-fields" style="display:none;">
+      <div class="field-group">
+        <label class="field-label">What would you like NetLab to do?</label>
+        <textarea class="field-input" rows="4" placeholder="Describe your idea. The more specific the better — what problem does it solve?"></textarea>
+      </div>
+      <div class="field-group">
+        <label class="field-label">How important is this to you?</label>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button class="priority-btn" onclick="setPriority(this,'nice')">Nice to have</button>
+          <button class="priority-btn" onclick="setPriority(this,'important')">Important</button>
+          <button class="priority-btn" onclick="setPriority(this,'critical')">Really need it</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="fields-empty" style="text-align:center;padding:32px;color:var(--text3);font-size:0.88rem;">
+      Select a feedback type above to get started
+    </div>
+
+    <!-- Common fields (shown after type selected) -->
+    <div id="common-fields" style="display:none;">
+      <div class="field-group">
+        <label class="field-label">Your email <span class="field-optional">optional — only if you want a reply</span></label>
+        <input type="email" class="field-input" placeholder="you@example.com"/>
+      </div>
+
+      <button class="btn btn-white btn-full" id="submit-btn" onclick="submitFeedback()" style="margin-top:8px;">
+        Send Feedback
+      </button>
+
+      <div style="text-align:center;font-size:0.72rem;color:var(--text3);margin-top:10px;">
+        No account needed. We don't sell your data. Ever.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Success state (hidden) -->
+  <div id="success-card" class="step-card hidden" style="text-align:center;padding:48px;">
+    <div style="font-size:3rem;margin-bottom:16px;">✅</div>
+    <div style="font-size:1.3rem;font-weight:700;margin-bottom:10px;">Thank you!</div>
+    <div style="color:var(--text2);font-size:0.9rem;margin-bottom:28px;">
+      Your feedback has been received. We read every single submission.
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <a href="index.html" class="btn btn-ghost btn-sm">Back to Home</a>
+      <button class="btn btn-white btn-sm" onclick="resetForm()">Send Another</button>
+    </div>
+  </div>
+
+  <!-- LinkedIn -->
+  <div style="margin-top:40px;">
+    <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;">Or connect directly</div>
+    <a href="https://www.linkedin.com/in/zainal-jamal/" target="_blank" class="contact-card" style="max-width:260px;display:flex;align-items:center;gap:16px;text-align:left;padding:18px 20px;">
+      <div style="font-size:1.8rem;flex-shrink:0;">💼</div>
+      <div>
+        <div class="contact-title" style="margin-bottom:2px;">LinkedIn</div>
+        <div class="contact-val">Zainal Jamal</div>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:2px;">linkedin.com/in/zainal-jamal</div>
+      </div>
+    </a>
+  </div>
+
+</div>
+</div>
+
+<style>
+  .type-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r2);
+    padding: 24px 20px;
+    text-align: center;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: border-color 200ms, background 200ms, box-shadow 200ms;
+    width: 100%;
+  }
+
+  .type-card:hover {
+    border-color: rgba(79,142,247,0.3);
+    background: var(--surface2);
+  }
+
+  .type-card.selected {
+    border-color: var(--accent);
+    background: var(--accent-lo);
+    box-shadow: 0 0 0 1px rgba(79,142,247,0.2);
+  }
+
+  .type-icon  { font-size:1.8rem; margin-bottom:10px; }
+  .type-title { font-weight:700; font-size:0.92rem; margin-bottom:6px; }
+  .type-desc  { font-size:0.78rem; color:var(--text2); line-height:1.5; }
+
+  .form-fields { display:flex; flex-direction:column; gap:18px; margin-bottom:20px; }
+
+  .field-group { display:flex; flex-direction:column; gap:6px; }
+
+  .field-label {
+    font-size:0.78rem; font-weight:600; color:var(--text2);
+    display:flex; align-items:center; gap:8px;
+  }
+
+  .field-optional {
+    font-weight:400; color:var(--text3); font-size:0.72rem;
+  }
+
+  .field-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.88rem;
+    padding: 10px 14px;
+    outline: none;
+    resize: vertical;
+    transition: border-color 150ms, box-shadow 150ms;
+    width: 100%;
+    line-height: 1.6;
+  }
+
+  .field-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-lo);
+  }
+
+  .field-input::placeholder { color: var(--text3); }
+  .field-mono { font-family: var(--mono); font-size: 0.8rem; color: var(--text); }
+
+  .priority-btn {
+    padding: 7px 16px; border-radius: 99px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text2); font-size: 0.8rem; font-family: var(--font);
+    cursor: pointer; transition: border-color 150ms, color 150ms, background 150ms;
+  }
+
+  .priority-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .priority-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .contact-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 18px;
+    text-align: center;
+    transition: border-color 200ms, background 200ms;
+    text-decoration: none;
+    display: block;
+  }
+
+  .contact-card:hover {
+    border-color: rgba(79,142,247,0.3);
+    background: var(--surface2);
+  }
+
+  .contact-icon  { font-size:1.4rem; margin-bottom:8px; }
+  .contact-title { font-size:0.72rem; color:var(--text3); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px; }
+  .contact-val   { font-size:0.82rem; font-weight:600; color:var(--text2); }
+</style>
+
+<script>
+let selectedType = null;
+
+function selectType(type) {
+  selectedType = type;
+
+  // Update card states
+  ['bug','router','idea'].forEach(t => {
+    document.getElementById(`type-${t}`).classList.toggle('selected', t === type);
+  });
+
+  // Hide all field groups
+  document.querySelectorAll('.form-fields').forEach(f => f.style.display = 'none');
+  document.getElementById('fields-empty').style.display = 'none';
+
+  // Show relevant fields
+  document.getElementById(`fields-${type}`).style.display = 'flex';
+  document.getElementById('common-fields').style.display = 'flex';
+  document.getElementById('common-fields').style.flexDirection = 'column';
+  document.getElementById('common-fields').style.gap = '14px';
+}
+
+function setPriority(btn, val) {
+  document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function submitFeedback() {
+  if (!selectedType) return;
+
+  const btn = document.getElementById('submit-btn');
+  btn.textContent = 'Sending...';
+  btn.disabled = true;
+
+  // Simulate send (replace with real API endpoint when backend is ready)
+  setTimeout(() => {
+    document.getElementById('form-card').classList.add('hidden');
+    document.getElementById('success-card').classList.remove('hidden');
+    btn.textContent = 'Send Feedback';
+    btn.disabled = false;
+  }, 1000);
+}
+
+function resetForm() {
+  selectedType = null;
+  ['bug','router','idea'].forEach(t => document.getElementById(`type-${t}`).classList.remove('selected'));
+  document.querySelectorAll('.form-fields').forEach(f => f.style.display = 'none');
+  document.getElementById('common-fields').style.display = 'none';
+  document.getElementById('fields-empty').style.display = 'block';
+  document.getElementById('form-card').classList.remove('hidden');
+  document.getElementById('success-card').classList.add('hidden');
+}
+</script>
+
+</body>
+</html>

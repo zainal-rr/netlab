@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NetLab — Auto Fetch Log</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<script src="js/nav.js" defer></script>
+
+<div class="page">
+<div class="page-inner">
+
+  <div class="page-hero">
+    <h1>Auto Fetch Log</h1>
+    <p>NetLab pulls your router logs automatically. No copy pasting needed.</p>
+    
+  </div>
+
+  <div class="disclaimer-inline" style="margin-bottom:24px;">
+    ⚠️ <strong>Success rate varies by brand:</strong>
+    ASUS / TP-Link ~80–85% · MikroTik / UniFi ~55–60% · Maxis / Huawei ~35–40%.
+    If fetch fails, use <a href="screenshot.html">Screenshot OCR</a> as fallback.
+    <a href="index.html#disclaimer">Full disclaimer →</a>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-badge">1</div>
+      <div>
+        <div class="step-title">Enter your router IP address</div>
+        <div class="step-sub">Usually 192.168.1.1 — click a preset below if unsure</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;">
+      <input id="gateway-ip" type="text" class="ip-input" value="192.168.1.1" spellcheck="false"/>
+      <button class="btn btn-white" id="fetch-btn" onclick="startFetch()">
+        Find My Logs
+      </button>
+    </div>
+
+    <div class="ip-presets">
+      <span style="font-size:0.68rem;color:var(--text3);align-self:center;margin-right:4px;">Common IPs:</span>
+      <span class="ip-preset" onclick="document.getElementById('gateway-ip').value='192.168.1.1'">192.168.1.1</span>
+      <span class="ip-preset" onclick="document.getElementById('gateway-ip').value='192.168.0.1'">192.168.0.1</span>
+      <span class="ip-preset" onclick="document.getElementById('gateway-ip').value='192.168.100.1'">192.168.100.1</span>
+      <span class="ip-preset" onclick="document.getElementById('gateway-ip').value='10.0.0.1'">10.0.0.1</span>
+    </div>
+
+    <div class="disclaimer-inline" style="margin-top:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;">
+
+        <!-- Windows -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:18px;">
+          <div style="font-weight:700;font-size:0.85rem;margin-bottom:14px;display:flex;align-items:center;gap:8px;">🪟 Windows</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="font-size:0.82rem;color:var(--text2);">1. Press <kbd style="background:var(--surface3);border:1px solid var(--border);padding:2px 8px;border-radius:5px;font-size:0.78rem;font-family:var(--mono);color:var(--text);">Win + R</kbd></div>
+            <div style="font-size:0.82rem;color:var(--text2);">2. Type <kbd style="background:var(--surface3);border:1px solid var(--border);padding:2px 8px;border-radius:5px;font-size:0.78rem;font-family:var(--mono);color:var(--accent);">cmd</kbd> and press Enter</div>
+            <div style="font-size:0.82rem;color:var(--text2);">3. Type <kbd style="background:var(--surface3);border:1px solid var(--border);padding:2px 8px;border-radius:5px;font-size:0.78rem;font-family:var(--mono);color:var(--accent);">ipconfig</kbd> and press Enter</div>
+            <div style="font-size:0.82rem;color:var(--text2);">4. Find the line that says <strong style="color:var(--text);">Default Gateway</strong></div>
+          </div>
+          <div style="margin-top:14px;background:#050505;border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:0.72rem;line-height:2;border:1px solid var(--border);">
+            <span style="color:rgba(255,255,255,0.3);">Default Gateway . . . :</span> <span style="color:#4f8ef7;font-weight:600;">192.168.1.1</span>
+          </div>
+        </div>
+
+        <!-- Mac -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:18px;">
+          <div style="font-weight:700;font-size:0.85rem;margin-bottom:14px;display:flex;align-items:center;gap:8px;">🍎 Mac</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="font-size:0.82rem;color:var(--text2);">1. Click the <strong style="color:var(--text);">Apple menu</strong> (top left)</div>
+            <div style="font-size:0.82rem;color:var(--text2);">2. Go to <strong style="color:var(--text);">System Settings → Network</strong></div>
+            <div style="font-size:0.82rem;color:var(--text2);">3. Select your active connection (WiFi or Ethernet)</div>
+            <div style="font-size:0.82rem;color:var(--text2);">4. Click <strong style="color:var(--text);">Details</strong> and look for <strong style="color:var(--text);">Router</strong></div>
+          </div>
+          <div style="margin-top:14px;background:#050505;border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:0.72rem;line-height:2;border:1px solid var(--border);">
+            <span style="color:rgba(255,255,255,0.3);">Router:</span> <span style="color:#4f8ef7;font-weight:600;">192.168.1.1</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Progress -->
+  <div class="step-card hidden" id="progress-card">
+    <div class="step-header">
+      <div class="step-badge">2</div>
+      <div>
+        <div class="step-title">Scanning your router...</div>
+        <div class="step-sub">Trying known log paths — takes 10-20 seconds</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);margin-bottom:12px;" id="brand-row">
+      <span id="brand-icon" style="font-size:1.4rem;">🔍</span>
+      <div>
+        <div id="brand-name" style="font-weight:700;font-size:0.88rem;">Detecting brand...</div>
+        <div id="brand-sub" style="font-size:0.72rem;color:var(--text3);">Reading router admin page</div>
+      </div>
+    </div>
+
+    <div class="progress-wrap" style="width:100%;height:2px;margin-bottom:12px;">
+      <div class="progress-fill" id="fetch-progress" style="width:0%;"></div>
+    </div>
+
+    <div class="progress-log" id="progress-log">
+      <span class="log-info">⬡ NetLab Auto Fetch starting...</span>
+    </div>
+  </div>
+
+  <!-- Step 3: Result -->
+  <div class="step-card hidden" id="result-card">
+    <div class="step-header">
+      <div class="step-badge done">✓</div>
+      <div>
+        <div class="step-title">Logs retrieved!</div>
+        <div class="step-sub" id="result-sub">Found via auto fetch</div>
+      </div>
+    </div>
+    <textarea class="log-input" id="log-preview" readonly style="min-height:180px;"></textarea>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-white" onclick="analyzeNow()">⚡ Analyze These Logs</button>
+      <button class="btn btn-ghost btn-sm" onclick="copyLogs()">📋 Copy</button>
+      <button class="btn btn-ghost btn-sm" onclick="resetFetch()">🔄 Try Again</button>
+    </div>
+  </div>
+
+  <!-- Fallback -->
+  <div class="step-card hidden" id="fallback-card" style="border-color:rgba(250,204,21,0.2);">
+    <div style="color:var(--warn);font-weight:700;margin-bottom:8px;">⚠️ Auto fetch could not retrieve your logs</div>
+    <div style="font-size:0.85rem;color:var(--text2);margin-bottom:20px;">
+      This happens with ISP-locked firmware (~30-50% of routers). Try one of these alternatives:
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <a href="screenshot.html" class="panel" style="text-decoration:none;cursor:pointer;">
+        <div style="font-weight:700;margin-bottom:6px;">📸 Screenshot OCR</div>
+        <div style="font-size:0.8rem;color:var(--text2);">Screenshot your log page. NetLab reads it automatically.</div>
+      </a>
+      <a href="analyzer.html" class="panel" style="text-decoration:none;cursor:pointer;">
+        <div style="font-weight:700;margin-bottom:6px;">📋 Copy Tampal Manual</div>
+        <div style="font-size:0.8rem;color:var(--text2);">Copy logs manually and paste into the Analyzer.</div>
+      </a>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script type="module">
+  import { autoFetchLogs } from './js/url-fetch.js';
+
+  window.startFetch = async () => {
+    const ip = document.getElementById('gateway-ip').value.trim();
+    if (!ip) return;
+    document.getElementById('progress-card').classList.remove('hidden');
+    document.getElementById('result-card').classList.add('hidden');
+    document.getElementById('fallback-card').classList.add('hidden');
+    document.getElementById('fetch-btn').disabled = true;
+
+    const logEl = document.getElementById('progress-log');
+    const bar   = document.getElementById('fetch-progress');
+
+    function log(msg, type = 'info') {
+      const s = document.createElement('span');
+      s.className = `log-${type}`;
+      s.textContent = `${new Date().toLocaleTimeString()} — ${msg}`;
+      logEl.appendChild(s);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    const result = await autoFetchLogs(ip, p => {
+      bar.style.width = p.percent + '%';
+      const t = p.stage === 'success' ? 'ok' : p.stage === 'failed' ? 'fail' : 'info';
+      log(p.message, t);
+      if (p.brand) {
+        document.getElementById('brand-icon').textContent = p.brand.icon || '📡';
+        document.getElementById('brand-name').textContent = p.brand.brand;
+        document.getElementById('brand-sub').textContent  = 'Router brand identified';
+      }
+    });
+
+    if (result.success && result.logText) {
+      document.getElementById('result-card').classList.remove('hidden');
+      document.getElementById('result-sub').textContent = `Sumber: ${result.url}`;
+      document.getElementById('log-preview').value = result.logText.substring(0, 2000);
+      window._fetchedLogs = result.logText;
+    } else {
+      document.getElementById('fallback-card').classList.remove('hidden');
+    }
+    document.getElementById('fetch-btn').disabled = false;
+  };
+
+  window.analyzeNow = () => {
+    if (!window._fetchedLogs) return;
+    sessionStorage.setItem('netlab_logs', window._fetchedLogs);
+    location.href = 'analyzer.html?source=autofetch';
+  };
+
+  window.copyLogs = () => {
+    if (!window._fetchedLogs) return;
+    navigator.clipboard.writeText(window._fetchedLogs).then(() => alert('Copied!'));
+  };
+
+  window.resetFetch = () => {
+    document.getElementById('progress-card').classList.add('hidden');
+    document.getElementById('result-card').classList.add('hidden');
+    document.getElementById('fallback-card').classList.add('hidden');
+    document.getElementById('progress-log').innerHTML = '<span class="log-info">⬡ NetLab Auto Fetch starting...</span>';
+    document.getElementById('fetch-progress').style.width = '0%';
+    document.getElementById('fetch-btn').disabled = false;
+  };
+</script>
+</body>
+</html>

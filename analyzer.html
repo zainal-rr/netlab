@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NetLab — Penganalisis Log</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<script src="js/nav.js" defer></script>
+
+<div class="page">
+  <div class="analyzer-wrap">
+
+    <!-- LEFT: INPUT -->
+    <div class="panel">
+      <div class="panel-label">Log Input</div>
+
+      <div style="display:flex;align-items:center;justify-content:flex-end;">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('log-input').value=''">Clear</button>
+      </div>
+
+      <textarea id="log-input" class="log-input"
+        placeholder="Paste your router logs here...
+
+Apr  9 03:21:44 router pppoed: LCP timeout
+Apr  9 03:21:45 router kernel: WAN eth0 down
+
+Ctrl+Enter to analyze"></textarea>
+
+      <div>
+        <div style="font-size:0.68rem;color:var(--text3);margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;">Try sample logs</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <span class="sample-tag" onclick="loadSample('pppoe')">PPPoE Drop</span>
+          <span class="sample-tag" onclick="loadSample('bruteforce')">Brute Force</span>
+          <span class="sample-tag" onclick="loadSample('dns')">DNS Fail</span>
+          <span class="sample-tag" onclick="loadSample('signal')">Weak Signal</span>
+          <span class="sample-tag" onclick="loadSample('heat')">Overheating</span>
+          <span class="sample-tag" onclick="loadSample('clean')">Clean Logs</span>
+        </div>
+      </div>
+
+      <button id="analyze-btn" class="btn btn-white btn-full" onclick="startAnalysis()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        Analyze Logs
+      </button>
+
+      <div style="text-align:center;font-size:0.72rem;color:var(--text3);">
+        🔒 Processed locally — no data sent to any server
+      </div>
+    </div>
+
+    <!-- RIGHT: RESULT -->
+    <div class="panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="panel-label">Diagnosis AI</div>
+        <div class="lang-toggle">
+          <button class="lang-btn active" data-lang="en">EN</button>
+          <button class="lang-btn" data-lang="bm">BM</button>
+        </div>
+      </div>
+
+      <div class="result-empty" id="result-empty">
+        <div style="font-size:2.5rem;opacity:0.25;">🔬</div>
+        <div>Paste your logs on the left and click <strong>Analyze Logs</strong></div>
+        <div style="font-size:0.72rem;margin-top:4px;">TP-Link · ASUS · MikroTik · UniFi · Maxis</div>
+      </div>
+
+      <div class="loading-state" id="loading-state">
+        <div class="loader-ring"></div>
+        <div class="loader-text" id="loader-text">Scanning log patterns...</div>
+        <div class="progress-wrap"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+
+      <div class="result-card" id="result-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <span class="sev-pill" id="severity-pill">🟢 OK</span>
+          <span class="router-chip font-mono" id="router-chip">📡 Not detected</span>
+        </div>
+
+        <div class="result-title" id="result-title"></div>
+        <div class="result-explanation" id="result-explanation"></div>
+
+        <div>
+          <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;">Fix Steps</div>
+          <ul class="result-steps" id="result-steps"></ul>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <a href="chat.html" class="btn btn-ghost btn-sm">💬 Ask AI for more help</a>
+          <button class="btn btn-ghost btn-sm" onclick="copyResult()">📋 Copy</button>
+        </div>
+
+        <div class="disclaimer-inline">
+          ⚠️ <strong>Indicative result only.</strong> Results may vary by router model and firmware version. Verify with router manual before making changes.
+          <a href="index.html#disclaimer">Full disclaimer →</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/analyzer.js"></script>
+<script>
+const SAMPLES = {
+  pppoe: `Apr  9 03:21:44 router pppoed[1234]: LCP timeout sending Config-Requests\nApr  9 03:21:45 router pppoed[1234]: PPPoE connection lost\nApr  9 03:21:46 router kernel: WAN interface eth0 down\nApr  9 03:22:10 router pppoed[1234]: PPPoE session terminated`,
+  bruteforce: `Apr  9 02:14:11 router dropbear[8812]: brute force attempt detected from 103.45.22.100\nApr  9 02:14:12 router sshd: Failed password for root from 103.45.22.100\nApr  9 02:14:14 router firewall: SYN flood detected from 185.220.101.47`,
+  dns: `Apr  9 04:05:12 router dnsmasq: DNS NXDOMAIN reply for google.com\nApr  9 04:05:13 router dnsmasq: DNS resolution failed for cloudflare.com\nApr  9 04:05:14 router dnsmasq: Upstream DNS 210.186.1.1 not responding`,
+  signal: `Apr  9 01:32:01 router hostapd: STA 68:2f:67:ab:cd:ef RSSI -82 dBm weak signal\nApr  9 01:32:05 router hostapd: STA dc:a6:32:11:22:33 signal poor RSSI -88 dBm`,
+  heat: `Apr  9 05:44:01 router thermal: CPU temperature 87C approaching throttle\nApr  9 05:44:10 router thermal: System temperature high 91C\nApr  9 05:44:15 router thermal: overheat protection triggered`,
+  clean: `Apr  9 06:00:01 router system: All services running normally\nApr  9 06:00:02 router dhcp: Lease renewed for 192.168.1.105\nApr  9 06:00:05 router wlan0: Station connected RSSI -48 dBm`,
+};
+
+function loadSample(k) {
+  document.getElementById('log-input').value = SAMPLES[k] || '';
+  document.getElementById('log-input').focus();
+}
+
+function copyResult() {
+  const title = document.getElementById('result-title').textContent;
+  const expl  = document.getElementById('result-explanation').textContent;
+  const steps = [...document.querySelectorAll('#result-steps li')]
+    .map((li,i) => `${i+1}. ${li.querySelector('span:last-child').textContent}`).join('\n');
+  navigator.clipboard.writeText(`NetLab Diagnosis\n\n${title}\n\n${expl}\n\nFix Steps:\n${steps}\n\n— netlab.labsoft.uk`);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem('netlab_logs');
+  const src   = new URLSearchParams(location.search).get('source');
+  if (saved) {
+    sessionStorage.removeItem('netlab_logs');
+    document.getElementById('log-input').value = saved;
+    if (src) setTimeout(() => startAnalysis(), 600);
+  }
+});
+</script>
+</body>
+</html>

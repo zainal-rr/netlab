@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NetLab — Screenshot OCR</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+<body>
+<script src="js/nav.js" defer></script>
+
+<div class="page">
+<div class="page-inner">
+
+  <div class="page-hero">
+    <h1>Screenshot OCR</h1>
+    <p>Cannot copy your logs? Screenshot your router log page and upload it here.</p>
+    
+  </div>
+
+  <!-- Step 1: How to screenshot -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-badge">1</div>
+      <div>
+        <div class="step-title">Take a screenshot of your router log page</div>
+        <div class="step-sub">Open 192.168.1.1 → find the Log section → screenshot it</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:14px;">
+        <div style="font-weight:700;font-size:0.82rem;margin-bottom:6px;color:var(--accent);">TP-Link</div>
+        <div style="font-size:0.78rem;color:var(--text2);line-height:1.65;">Advanced → System → System Log</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:14px;">
+        <div style="font-weight:700;font-size:0.82rem;margin-bottom:6px;color:var(--accent);">ASUS</div>
+        <div style="font-size:0.78rem;color:var(--text2);line-height:1.65;">Administration → System Log</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:14px;">
+        <div style="font-weight:700;font-size:0.82rem;margin-bottom:6px;color:var(--accent);">UniFi</div>
+        <div style="font-size:0.78rem;color:var(--text2);line-height:1.65;">Settings → System → Logs</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:14px;">
+        <div style="font-weight:700;font-size:0.82rem;margin-bottom:6px;color:var(--accent);">Maxis / D-Link</div>
+        <div style="font-size:0.78rem;color:var(--text2);line-height:1.65;">Management → System Log</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Upload -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-badge">2</div>
+      <div>
+        <div class="step-title">Upload your screenshot</div>
+        <div class="step-sub">Drag and drop or click to browse · JPG, PNG, WebP</div>
+      </div>
+    </div>
+
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept="image/*" onchange="handleFile(event)"/>
+      <div style="font-size:2.5rem;margin-bottom:12px;opacity:0.4;">🖼️</div>
+      <div style="font-weight:600;margin-bottom:6px;">Drop your screenshot here</div>
+      <div style="font-size:0.8rem;color:var(--text3);">or click to browse files</div>
+    </div>
+
+    <div id="preview-wrap" style="display:none;flex-direction:column;gap:12px;">
+      <img id="preview-img" style="max-width:100%;max-height:260px;border-radius:var(--r);border:1px solid var(--border);object-fit:contain;background:#000;" alt="preview"/>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-white" id="ocr-btn" onclick="runOCR()">Read Text from Screenshot</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetUpload()">↩ Change Image</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OCR progress -->
+  <div class="step-card hidden" id="ocr-progress-card">
+    <div class="step-header">
+      <div class="step-badge">3</div>
+      <div>
+        <div class="step-title">Reading your screenshot...</div>
+        <div class="step-sub">Downloads OCR language data (~15MB) on first run only</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px;">
+      <div class="loader-ring"></div>
+      <div class="loader-text" id="ocr-status">Initializing OCR engine...</div>
+      <div class="progress-wrap" style="width:220px;"><div class="progress-fill" id="ocr-bar" style="width:0%;"></div></div>
+    </div>
+  </div>
+
+  <!-- OCR result -->
+  <div class="step-card hidden" id="ocr-result-card">
+    <div class="step-header">
+      <div class="step-badge done">✓</div>
+      <div>
+        <div class="step-title">Text extracted</div>
+        <div class="step-sub" id="ocr-lines-sub">0 log lines found</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <span style="font-size:0.72rem;color:var(--text3);min-width:100px;">OCR Confidence</span>
+      <div style="flex:1;height:4px;background:var(--border);border-radius:99px;overflow:hidden;">
+        <div id="conf-fill" style="height:100%;border-radius:99px;background:var(--ok);width:0%;transition:width 0.5s;"></div>
+      </div>
+      <span id="conf-val" style="font-size:0.75rem;font-weight:700;color:var(--ok);min-width:28px;font-family:var(--mono);">0%</span>
+    </div>
+
+    <div id="low-conf-warn" style="display:none;background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.2);border-radius:var(--r);padding:10px 14px;font-size:0.76rem;color:var(--err);margin-bottom:8px;">
+      ⚠️ OCR Confidence rendah. Screenshot mungkin kabur atau resolusi rendah.
+    </div>
+
+    <textarea class="log-input" id="ocr-preview" readonly style="min-height:150px;"></textarea>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-white" onclick="analyzeOCR()">⚡ Analyze These Logs</button>
+      <button class="btn btn-ghost btn-sm" onclick="copyOCR()">📋 Copy Text</button>
+      <button class="btn btn-ghost btn-sm" onclick="resetAll()">🔄 New Screenshot</button>
+    </div>
+
+    <div class="disclaimer-inline">
+      🔒 OCR runs in your browser. Your screenshot never leaves your device.
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+let currentImg = null, ocrText = null;
+
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', ()  => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadImage(f);
+});
+
+function handleFile(e) { const f = e.target.files[0]; if (f) loadImage(f); }
+
+function loadImage(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('preview-img');
+    img.src = e.target.result;
+    img.onload = () => { currentImg = img; };
+    zone.style.display = 'none';
+    const pw = document.getElementById('preview-wrap');
+    pw.style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetUpload() {
+  zone.style.display = 'block';
+  document.getElementById('preview-wrap').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  document.getElementById('ocr-progress-card').classList.add('hidden');
+  document.getElementById('ocr-result-card').classList.add('hidden');
+  currentImg = null;
+}
+
+function resetAll() { resetUpload(); ocrText = null; }
+
+async function runOCR() {
+  if (!currentImg) return;
+  document.getElementById('ocr-progress-card').classList.remove('hidden');
+  document.getElementById('ocr-result-card').classList.add('hidden');
+  document.getElementById('ocr-btn').disabled = true;
+
+  const status = document.getElementById('ocr-status');
+  const bar    = document.getElementById('ocr-bar');
+
+  try {
+    const worker = await Tesseract.createWorker('eng', 1, {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          bar.style.width = Math.round(m.progress * 60 + 30) + '%';
+          status.textContent = 'Reading text from screenshot...';
+        } else if (m.status.includes('loading')) {
+          bar.style.width = '15%'; status.textContent = 'Loading OCR engine...';
+        } else if (m.status.includes('language')) {
+          bar.style.width = '25%'; status.textContent = 'Loading language data...';
+        }
+      }
+    });
+
+    bar.style.width = '10%'; status.textContent = 'Scanning image...';
+    const { data } = await worker.recognize(currentImg);
+    await worker.terminate();
+    bar.style.width = '100%';
+
+    const lines = data.text.split('\n').map(l => l.trim()).filter(l =>
+      l.length > 8 && /\d{2}:\d{2}|\b(error|warn|fail|ppp|wan|dns|dhcp|auth|kernel|drop|timeout)\b/i.test(l)
+    );
+    ocrText = lines.length > 3 ? lines.join('\n') : data.text.trim();
+
+    setTimeout(() => {
+      document.getElementById('ocr-progress-card').classList.add('hidden');
+      document.getElementById('ocr-result-card').classList.remove('hidden');
+
+      const conf = Math.round(data.confidence);
+      document.getElementById('conf-fill').style.width = conf + '%';
+      document.getElementById('conf-fill').style.background = conf > 70 ? 'var(--ok)' : conf > 50 ? 'var(--warn)' : 'var(--err)';
+      document.getElementById('conf-val').textContent = conf + '%';
+      document.getElementById('conf-val').style.color = conf > 70 ? 'var(--ok)' : conf > 50 ? 'var(--warn)' : 'var(--err)';
+      if (conf < 60) document.getElementById('low-conf-warn').style.display = 'block';
+      document.getElementById('ocr-lines-sub').textContent = `${lines.length || '?'} log lines found`;
+      document.getElementById('ocr-preview').value = ocrText.substring(0, 2000);
+      document.getElementById('ocr-btn').disabled = false;
+    }, 300);
+  } catch (e) {
+    status.textContent = 'OCR failed: ' + e.message;
+    document.getElementById('ocr-btn').disabled = false;
+  }
+}
+
+function analyzeOCR() {
+  if (!ocrText) return;
+  sessionStorage.setItem('netlab_logs', ocrText);
+  location.href = 'analyzer.html?source=ocr';
+}
+
+function copyOCR() {
+  if (!ocrText) return;
+  navigator.clipboard.writeText(ocrText).then(() => alert('Copied!'));
+}
+</script>
+</body>
+</html>

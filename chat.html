@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NetLab — AI Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    :root {
+      --bg:      #060608;
+      --surface: #0d0d12;
+      --border:  rgba(255,255,255,0.08);
+      --accent:  #4f8ef7;
+      --accent-lo: rgba(79,142,247,0.1);
+      --text:    #ffffff;
+      --text2:   rgba(255,255,255,0.45);
+      --text3:   rgba(255,255,255,0.2);
+      --ok:      #4ade80;
+      --err:     #f87171;
+      --font:    'Geist', system-ui, sans-serif;
+      --mono:    'Geist Mono', monospace;
+      --ease:    cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    /* ── Floating pill nav ── */
+    .nav {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 500;
+      display: flex; align-items: center; gap: 2px; padding: 5px 6px;
+      background: rgba(10,10,12,0.9); backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 99px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+      white-space: nowrap;
+    }
+
+    .nav-logo {
+      display: flex; align-items: center; gap: 8px; padding: 5px 16px 5px 8px;
+      font-size: 0.88rem; font-weight: 700;
+      border-right: 1px solid rgba(255,255,255,0.08); margin-right: 4px;
+    }
+
+    .nav-logo-ring {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--accent-lo); border: 1px solid rgba(79,142,247,0.3);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .nav-logo-ring svg { width: 12px; height: 12px; }
+
+    .nav-link {
+      padding: 5px 13px; border-radius: 99px;
+      font-size: 0.8rem; font-weight: 500; color: rgba(255,255,255,0.72);
+      transition: color 150ms var(--ease), background 150ms var(--ease);
+      text-decoration: none;
+    }
+
+    .nav-link:hover { color: var(--text); background: rgba(255,255,255,0.07); }
+    .nav-link.active { color: var(--text); background: rgba(255,255,255,0.09); font-weight: 600; }
+
+    .nav-cta {
+      margin-left: 6px; padding: 7px 18px; border-radius: 99px;
+      font-size: 0.8rem; font-weight: 700;
+      background: var(--text); color: var(--bg);
+      border: none; cursor: pointer; font-family: var(--font);
+      transition: opacity 150ms; text-decoration: none;
+    }
+    .nav-cta:hover { opacity: 0.88; }
+
+    /* ── Chat layout ── */
+    .chat-wrap {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Messages area ── */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 100px 24px 0;
+      scroll-behavior: smooth;
+    }
+
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 99px; }
+
+    /* ── Welcome state ── */
+    .welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 36px;
+      text-align: center;
+      flex: 1;
+      width: 100%;
+      max-width: 680px;
+      padding-bottom: 40px;
+      animation: fadeUp 600ms var(--ease) both;
+    }
+
+    /* Glowing orb — inspired by Aether */
+    .orb-wrap {
+      position: relative;
+      width: 100px; height: 100px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .orb-glow {
+      position: absolute;
+      width: 140px; height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(79,142,247,0.35) 0%, rgba(79,142,247,0.08) 50%, transparent 70%);
+      animation: orbPulse 3s ease-in-out infinite;
+    }
+
+    .orb {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%,
+        rgba(140,190,255,0.95) 0%,
+        rgba(79,142,247,0.9) 35%,
+        rgba(40,90,220,0.85) 70%,
+        rgba(20,50,160,0.8) 100%
+      );
+      box-shadow:
+        0 0 40px rgba(79,142,247,0.5),
+        0 0 80px rgba(79,142,247,0.2),
+        inset 0 2px 4px rgba(255,255,255,0.3);
+      position: relative;
+      z-index: 1;
+      animation: orbFloat 4s ease-in-out infinite;
+    }
+
+    /* Orbiting dot */
+    .orb-orbit {
+      position: absolute;
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      border: 1px solid rgba(79,142,247,0.2);
+      animation: orbitSpin 4s linear infinite;
+    }
+
+    .orb-orbit::after {
+      content: '';
+      position: absolute;
+      top: -3px; left: 50%;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: rgba(140,190,255,0.9);
+      box-shadow: 0 0 8px rgba(79,142,247,0.8);
+      transform: translateX(-50%);
+    }
+
+    @keyframes orbPulse {
+      0%,100% { opacity: 0.7; transform: scale(1); }
+      50%      { opacity: 1;   transform: scale(1.1); }
+    }
+
+    @keyframes orbFloat {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-6px); }
+    }
+
+    @keyframes orbitSpin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    .welcome-heading {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+    }
+
+    .welcome-sub {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.72);
+      max-width: 380px;
+      line-height: 1.65;
+    }
+
+    /* Suggestion pills — Aether style */
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      max-width: 600px;
+    }
+
+    .suggestion {
+      padding: 8px 18px;
+      border-radius: 99px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.03);
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.72);
+      cursor: pointer;
+      transition: border-color 150ms var(--ease), color 150ms var(--ease), background 150ms var(--ease), transform 160ms var(--ease);
+      font-family: var(--font);
+      white-space: nowrap;
+    }
+
+    .suggestion:hover {
+      border-color: rgba(79,142,247,0.4);
+      color: var(--text);
+      background: rgba(79,142,247,0.06);
+    }
+
+    .suggestion:active { transform: scale(0.97); }
+
+    /* ── Messages thread ── */
+    .thread {
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      width: 100%;
+      max-width: 680px;
+      padding-bottom: 40px;
+    }
+
+    .msg { display: flex; gap: 14px; animation: fadeUp 250ms var(--ease); }
+    .msg.user { flex-direction: row-reverse; }
+
+    .msg-avatar {
+      width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; align-self: flex-end;
+    }
+
+    .msg.ai .msg-avatar {
+      background: var(--accent-lo); border: 1px solid rgba(79,142,247,0.2);
+    }
+
+    .msg.ai .msg-avatar svg { width: 14px; height: 14px; stroke: var(--accent); fill: none; stroke-width: 1.5; }
+
+    .msg.user .msg-avatar {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .msg.user .msg-avatar svg { width: 14px; height: 14px; stroke: var(--text3); fill: none; stroke-width: 1.5; }
+
+    .msg-bubble {
+      padding: 12px 18px; border-radius: 18px;
+      font-size: 0.88rem; line-height: 1.72; word-break: break-word;
+      max-width: calc(100% - 48px);
+    }
+
+    .msg.ai .msg-bubble {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg.user .msg-bubble {
+      background: var(--accent);
+      color: #fff; font-weight: 500;
+      border-bottom-right-radius: 4px;
+    }
+
+    /* Thinking dots */
+    .thinking {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 18px; border-bottom-left-radius: 4px;
+      width: fit-content;
+    }
+
+    .dots { display: flex; gap: 4px; }
+    .dots span {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--text3);
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+    .dots span:nth-child(2) { animation-delay: 0.15s; }
+    .dots span:nth-child(3) { animation-delay: 0.30s; }
+
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0);opacity:0.3} 30%{transform:translateY(-5px);opacity:1} }
+
+    .cursor-blink {
+      display: inline-block; width: 2px; height: 1em;
+      background: var(--accent); margin-left: 2px; vertical-align: middle;
+      animation: blink 0.8s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── Input bar ── fixed at bottom ── */
+    .input-bar {
+      flex-shrink: 0;
+      padding: 20px 24px 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* The glowing input box — like Aether */
+    .input-shell {
+      width: 100%;
+      max-width: 680px;
+      border-radius: 20px;
+      padding: 2px;
+      background: linear-gradient(135deg, rgba(79,142,247,0.4), rgba(79,142,247,0.08));
+      box-shadow: 0 0 0 1px rgba(79,142,247,0.15), 0 0 40px rgba(79,142,247,0.08);
+      transition: box-shadow 200ms var(--ease);
+    }
+
+    .input-shell:focus-within {
+      box-shadow: 0 0 0 1px rgba(79,142,247,0.5), 0 0 60px rgba(79,142,247,0.15);
+    }
+
+    .input-core {
+      background: #0d0d14;
+      border-radius: 18px;
+      padding: 16px 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .input-textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      resize: none;
+      min-height: 24px;
+      max-height: 120px;
+      overflow-y: hidden;
+    }
+
+    .input-textarea::placeholder { color: rgba(255,255,255,0.45); }
+
+    .input-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .input-footer-left {
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* Lang toggle small */
+    .lang-small {
+      display: flex; gap: 2px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 99px; padding: 2px;
+    }
+
+    .lang-small button {
+      padding: 3px 10px; border-radius: 99px;
+      font-size: 0.72rem; font-weight: 600;
+      border: none; background: transparent; color: rgba(255,255,255,0.55);
+      cursor: pointer; transition: background 150ms, color 150ms;
+      font-family: var(--font);
+    }
+
+    .lang-small button.active { background: var(--accent); color: #fff; }
+
+    /* Attach log button */
+    .attach-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 99px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: transparent; color: rgba(255,255,255,0.55);
+      font-size: 0.72rem; font-family: var(--font); cursor: pointer;
+      transition: color 150ms, border-color 150ms;
+    }
+    .attach-btn:hover { color: var(--accent); border-color: rgba(79,142,247,0.3); }
+    .attach-btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+    /* Send button */
+    .send-btn {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--accent); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity 150ms, transform 160ms var(--ease);
+      box-shadow: 0 4px 16px rgba(79,142,247,0.3);
+      flex-shrink: 0;
+    }
+    .send-btn:hover { opacity: 0.9; }
+    .send-btn:active { transform: scale(0.95); }
+    .send-btn:disabled { opacity: 0.25; cursor: not-allowed; transform: none; }
+    .send-btn svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; }
+
+    /* Attach area */
+    .attach-area {
+      display: none;
+      width: 100%; max-width: 680px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px; overflow: hidden;
+    }
+    .attach-area.open { display: block; }
+
+    .attach-textarea {
+      width: 100%; background: transparent; border: none; outline: none;
+      color: rgba(79,142,247,0.8); font-family: var(--mono); font-size: 0.72rem;
+      padding: 12px 16px; resize: vertical; min-height: 80px; max-height: 140px;
+      line-height: 1.8;
+    }
+    .attach-textarea::placeholder { color: rgba(255,255,255,0.08); }
+
+    /* Offline note */
+    .offline-bar {
+      display: none;
+      width: 100%; max-width: 680px;
+      background: rgba(248,113,113,0.06);
+      border: 1px solid rgba(248,113,113,0.15);
+      border-radius: 10px; padding: 8px 16px;
+      font-size: 0.74rem; color: rgba(255,255,255,0.6); text-align: center;
+    }
+
+    /* Status indicator - top right corner, minimal */
+    .status-chip {
+      position: fixed; top: 28px; right: 28px; z-index: 600;
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(13,13,18,0.85); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 99px; padding: 5px 12px;
+      font-size: 0.7rem; color: rgba(255,255,255,0.55); font-family: var(--mono);
+    }
+
+    .status-dot {
+      width: 5px; height: 5px; border-radius: 50%; background: var(--text3);
+      flex-shrink: 0;
+    }
+    .status-dot.on  { background: var(--ok); box-shadow: 0 0 6px var(--ok); animation: dotPulse 2s infinite; }
+    .status-dot.off { background: var(--err); }
+
+    @keyframes dotPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* Clear button — minimal, top right area */
+    .clear-btn {
+      position: fixed; top: 28px; right: 130px; z-index: 600;
+      background: rgba(13,13,18,0.85); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 99px; padding: 5px 14px;
+      font-size: 0.7rem; color: rgba(255,255,255,0.55); font-family: var(--font);
+      cursor: pointer; transition: color 150ms, border-color 150ms;
+      display: none;
+    }
+    .clear-btn:hover { color: rgba(255,255,255,0.72); border-color: rgba(255,255,255,0.4); }
+
+    /* ── Grain ── */
+    body::after {
+      content: ''; position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      background-size: 200px 200px; opacity: 0.025;
+    }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-logo">
+    <div class="nav-logo-ring">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#4f8ef7" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="4"/>
+        <line x1="12" y1="2" x2="12" y2="7"/>
+        <line x1="12" y1="17" x2="12" y2="22"/>
+        <line x1="2" y1="12" x2="7" y2="12"/>
+        <line x1="17" y1="12" x2="22" y2="12"/>
+      </svg>
+    </div>
+    NetLab
+  </div>
+  <a href="index.html"      class="nav-link">Home</a>
+  <a href="chat.html"       class="nav-link active">AI Chat</a>
+  <a href="analyzer.html"   class="nav-link">Analyzer</a>
+  <a href="auto-fetch.html" class="nav-link">Auto Fetch</a>
+  <a href="screenshot.html" class="nav-link">Screenshot</a>
+  <a href="qr.html"         class="nav-link">QR SOS</a>
+  <a href="feedback.html"   class="nav-link">Feedback</a>
+  <a href="chat.html"       class="nav-cta">Get Started</a>
+</nav>
+
+<!-- Status chip -->
+<div class="status-chip">
+  <span class="status-dot" id="status-dot"></span>
+  <span id="status-text">Connecting</span>
+</div>
+
+<!-- Clear button — visible once chat starts -->
+<button class="clear-btn" id="clear-btn" onclick="clearChat()">Clear</button>
+
+<!-- Main chat -->
+<div class="chat-wrap" style="z-index:2;position:relative;">
+
+  <!-- Messages -->
+  <div class="messages" id="messages">
+
+    <!-- Welcome state -->
+    <div class="welcome" id="welcome">
+      <div class="orb-wrap">
+        <div class="orb-glow"></div>
+        <div class="orb-orbit"></div>
+        <div class="orb"></div>
+      </div>
+
+      <div>
+        <div class="welcome-heading">How can I help<br>you today?</div>
+        <div class="welcome-sub" style="margin-top:10px;">
+          Describe your network issue. I'll diagnose it instantly.
+        </div>
+      </div>
+
+      <div class="suggestions">
+        <button class="suggestion" onclick="pick(this)">Internet keeps dropping</button>
+        <button class="suggestion" onclick="pick(this)">WiFi perlahan sangat</button>
+        <button class="suggestion" onclick="pick(this)">Brute force detected in logs</button>
+        <button class="suggestion" onclick="pick(this)">Websites tak boleh buka</button>
+        <button class="suggestion" onclick="pick(this)">Router overheating</button>
+        <button class="suggestion" onclick="pick(this)">DNS resolution failing</button>
+      </div>
+    </div>
+
+    <!-- Thread (hidden at start) -->
+    <div class="thread" id="thread" style="display:none;"></div>
+
+  </div>
+
+  <!-- Input bar -->
+  <div class="input-bar">
+
+    <div class="offline-bar" id="offline-bar">
+      Backend offline — demo mode active. Start server: <span style="font-family:var(--mono);color:rgba(79,142,247,0.6);">cd backend && bash start.sh</span>
+    </div>
+
+    <!-- Attach area -->
+    <div class="attach-area" id="attach-area">
+      <textarea id="log-attach" class="attach-textarea" placeholder="Paste router logs here (optional)..."></textarea>
+    </div>
+
+    <!-- Main input shell -->
+    <div class="input-shell">
+      <div class="input-core">
+        <textarea
+          id="chat-input"
+          class="input-textarea"
+          placeholder="Ask anything about your network..."
+          rows="1"
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)"
+        ></textarea>
+        <div class="input-footer">
+          <div class="input-footer-left">
+            <div class="lang-small">
+              <button class="active" id="pill-en" onclick="setLang('en')">EN</button>
+              <button id="pill-bm" onclick="setLang('bm')">BM</button>
+            </div>
+            <button class="attach-btn" id="attach-toggle" onclick="toggleAttach()">
+              <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              <span id="attach-label">Attach logs</span>
+            </button>
+          </div>
+          <button class="send-btn" id="send-btn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:0.65rem;color:rgba(255,255,255,0.4);letter-spacing:0.04em;">
+      Enter to send · Shift+Enter for new line
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:8000'
+  : 'https://netlab.labsoft.uk';
+let lang = 'en', streaming = false, online = false, attachOpen = false;
+
+/* ── Health ── */
+async function checkHealth() {
+  try {
+    const r = await fetch(`${API}/health`, { signal: AbortSignal.timeout(3000) });
+    const d = await r.json();
+    online = true;
+    document.getElementById('status-dot').className  = 'status-dot on';
+    document.getElementById('status-text').textContent = d.model?.split(':')[0] || 'llama';
+    document.getElementById('offline-bar').style.display = 'none';
+  } catch {
+    online = false;
+    document.getElementById('status-dot').className  = 'status-dot off';
+    document.getElementById('status-text').textContent = 'offline';
+    document.getElementById('offline-bar').style.display = 'block';
+  }
+}
+
+checkHealth();
+setInterval(checkHealth, 30000);
+
+/* ── Lang ── */
+function setLang(l) {
+  lang = l;
+  document.getElementById('pill-en').classList.toggle('active', l === 'en');
+  document.getElementById('pill-bm').classList.toggle('active', l === 'bm');
+}
+
+/* ── Attach ── */
+let attachOpen2 = false;
+function toggleAttach() {
+  attachOpen2 = !attachOpen2;
+  document.getElementById('attach-area').classList.toggle('open', attachOpen2);
+  document.getElementById('attach-label').textContent = attachOpen2 ? 'Hide logs' : 'Attach logs';
+}
+
+/* ── Resize ── */
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  el.style.overflowY = el.scrollHeight > 120 ? 'auto' : 'hidden';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+/* ── Suggestions ── */
+function pick(el) {
+  document.getElementById('chat-input').value = el.textContent;
+  autoResize(document.getElementById('chat-input'));
+  sendMessage();
+}
+
+/* ── Thread helpers ── */
+function showThread() {
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('thread').style.display  = 'flex';
+  document.getElementById('clear-btn').style.display = 'block';
+}
+
+function appendUser(text) {
+  showThread();
+  const thread = document.getElementById('thread');
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `
+    <div class="msg-avatar">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+    <div class="msg-bubble">${esc(text)}</div>`;
+  thread.appendChild(div);
+  scroll();
+}
+
+function appendThinking() {
+  showThread();
+  const thread = document.getElementById('thread');
+  const div = document.createElement('div');
+  div.className = 'msg ai'; div.id = 'thinking-el';
+  div.innerHTML = `
+    <div class="msg-avatar">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </div>
+    <div class="thinking"><div class="dots"><span></span><span></span><span></span></div></div>`;
+  thread.appendChild(div);
+  scroll();
+  return div;
+}
+
+function appendAI(stream = false) {
+  showThread();
+  const thread = document.getElementById('thread');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  if (stream) bubble.innerHTML = '<span class="cursor-blink"></span>';
+  div.innerHTML = `<div class="msg-avatar"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>`;
+  div.appendChild(bubble);
+  thread.appendChild(div);
+  scroll();
+  return bubble;
+}
+
+function scroll() {
+  const m = document.getElementById('messages');
+  m.scrollTo({ top: m.scrollHeight, behavior: 'smooth' });
+}
+
+function esc(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ── Offline demo ── */
+function demoReply(text) {
+  const t = text.toLowerCase();
+  if (/pppoe|lcp|wan.*down|drops|dropping|putus/.test(t))
+    return `PPPoE / WAN disconnection detected — common with Unifi and Maxis fiber.\n\nQuick fixes:\n1. Restart your ONT and router (power off 30s)\n2. Check PPPoE credentials in router settings\n3. Call Unifi: 1300-88-1221\n\nStart the backend for full AI analysis with RAG knowledge base.`;
+  if (/brute|syn flood|port scan|threat|hack/.test(t))
+    return `CRITICAL: Security threat detected.\n\n1. Change router admin password immediately\n2. Enable firewall\n3. Block the suspicious IP address\n4. Contact your ISP abuse team\n\nStart backend for detailed analysis.`;
+  if (/dns|nxdomain|website|laman web|tak boleh buka/.test(t))
+    return `DNS failure detected.\n\nFix: Change DNS to 1.1.1.1 (Cloudflare) in your router DHCP settings. Far more reliable than Unifi default DNS.`;
+  if (/slow|perlahan|lambat|lembab/.test(t))
+    return `Slow connection could be caused by:\n1. WiFi interference — try switching to 5GHz band\n2. DNS slowness — change to 1.1.1.1\n3. ISP congestion — run speed test at fast.com\n4. Router overheating — check if it feels hot\n\nStart backend for deeper AI analysis.`;
+  if (/overheat|panas|temperature|hot/.test(t))
+    return `Router overheating detected.\n\n1. Move router to an open, ventilated area\n2. Do not place in a cabinet or enclosed shelf\n3. Clean dust from vents with compressed air\n4. If it continues, the router may need replacing.`;
+  return `Backend is offline. For full AI analysis:\n\n1. SSH into your server\n2. cd netlab-ui/backend\n3. bash start.sh\n\nOr use the Pattern Analyzer (no backend needed) for instant offline results.`;
+}
+
+/* ── Send ── */
+async function sendMessage() {
+  if (streaming) return;
+  const input  = document.getElementById('chat-input');
+  const attach = document.getElementById('log-attach');
+  const btn    = document.getElementById('send-btn');
+  const text   = input.value.trim();
+  const logs   = attach?.value.trim() || '';
+  if (!text && !logs) return;
+
+  let full = text;
+  if (logs) full += `\n\n[Router Logs]\n${logs}`;
+
+  appendUser(text || '(logs attached)');
+  input.value = ''; input.style.height = 'auto';
+  if (attach) attach.value = '';
+  if (attachOpen2) toggleAttach();
+
+  streaming = true; btn.disabled = true;
+
+  if (!online) {
+    const t = appendThinking();
+    await new Promise(r => setTimeout(r, 800));
+    t.remove();
+    const b = appendAI();
+    b.style.whiteSpace = 'pre-wrap';
+    b.textContent = demoReply(full);
+    streaming = false; btn.disabled = false;
+    return;
+  }
+
+  const think = appendThinking();
+  try {
+    const res = await fetch(`${API}/api/analyze`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ log_text: full, language: lang, stream: true }),
+    });
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    think.remove();
+    const bubble = appendAI(true);
+    const cursor = bubble.querySelector('.cursor-blink');
+    let fullText = '';
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      for (const line of dec.decode(value, { stream: true }).split('\n')) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const d = JSON.parse(line.slice(6));
+          if (d.token) {
+            fullText += d.token;
+            bubble.textContent = fullText;
+            bubble.appendChild(cursor);
+            scroll();
+          }
+          if (d.done || d.error) cursor.remove();
+        } catch {}
+      }
+    }
+    cursor.remove();
+  } catch (e) {
+    think.remove();
+    const b = appendAI();
+    b.textContent = `Connection error: ${e.message}`;
+  }
+  streaming = false; btn.disabled = false;
+}
+
+/* ── Clear ── */
+function clearChat() {
+  document.getElementById('thread').innerHTML = '';
+  document.getElementById('thread').style.display = 'none';
+  document.getElementById('welcome').style.display = 'flex';
+  document.getElementById('clear-btn').style.display = 'none';
+}
+
+/* ── Load from other pages ── */
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem('netlab_logs');
+  if (saved) {
+    sessionStorage.removeItem('netlab_logs');
+    document.getElementById('log-attach').value = saved;
+    toggleAttach();
+    document.getElementById('chat-input').value = 'Please analyze these router logs and tell me what is wrong.';
+    autoResize(document.getElementById('chat-input'));
+  }
+});
+</script>
+
+</body>
+</html>

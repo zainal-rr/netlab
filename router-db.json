@@ -1,0 +1,75 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "updated": "2026-04-09",
+    "source": "netlab.labsoft.uk",
+    "note": "Community-maintained router log URL database. Contribute at netlab.labsoft.uk/contribute"
+  },
+  "fingerprints": [
+    { "match": ["TL-", "Archer", "TP-LINK", "tplink"], "brand": "TP-Link", "icon": "🔵" },
+    { "match": ["ASUS", "RT-", "AiMesh", "asuswrt"], "brand": "ASUS", "icon": "🟡" },
+    { "match": ["MikroTik", "RouterOS", "ROS"], "brand": "MikroTik", "icon": "🔴" },
+    { "match": ["UniFi", "Ubiquiti", "EdgeOS", "Dream Machine", "USG"], "brand": "UniFi", "icon": "🟢" },
+    { "match": ["D-Link", "DIR-", "DSL-"], "brand": "D-Link", "icon": "🟠" },
+    { "match": ["Huawei", "HG8", "EchoLife"], "brand": "Huawei", "icon": "🔴" },
+    { "match": ["Xiaomi", "MiWiFi", "Mi Router"], "brand": "Xiaomi", "icon": "🟠" },
+    { "match": ["Netgear", "Orbi", "Nighthawk"], "brand": "Netgear", "icon": "⚪" },
+    { "match": ["Linksys", "Velop"], "brand": "Linksys", "icon": "⚪" },
+    { "match": ["ZTE", "ZXHN"], "brand": "ZTE", "icon": "🔵" }
+  ],
+  "log_urls": {
+    "TP-Link": [
+      { "path": "/cgi-bin/log_syslog.asp", "note": "AX/BE series (2021+)", "confidence": 0.8 },
+      { "path": "/userRpm/SystemLogRpm.htm", "note": "Classic Archer series", "confidence": 0.7 },
+      { "path": "/cgi-bin/luci/admin/status/syslog", "note": "OpenWRT-based TP-Link", "confidence": 0.6 },
+      { "path": "/cgi-bin/cgi_get_log", "note": "Some BE series", "confidence": 0.5 },
+      { "path": "/webpages/index.html#syslog", "note": "New UI (2023+)", "confidence": 0.4 }
+    ],
+    "ASUS": [
+      { "path": "/Main_LogStatus_Content.asp", "note": "Most RT-series", "confidence": 0.85 },
+      { "path": "/cgi-bin/luci/admin/status/syslog", "note": "Merlin firmware", "confidence": 0.7 },
+      { "path": "/getSystemLog.cgi", "note": "Some ZenWiFi", "confidence": 0.6 },
+      { "path": "/syslogs.asp", "note": "Older RT models", "confidence": 0.5 }
+    ],
+    "MikroTik": [
+      { "path": "/log", "note": "RouterOS web interface", "confidence": 0.7 },
+      { "path": "/webfig/#Log", "note": "Webfig interface", "confidence": 0.6 },
+      { "path": "/cgi-bin/luci/admin/status/syslog", "note": "Some builds", "confidence": 0.3 }
+    ],
+    "UniFi": [
+      { "path": "/proxy/network/api/s/default/stat/sysinfo", "note": "Dream Machine API", "confidence": 0.7 },
+      { "path": "/api/s/default/stat/sysinfo", "note": "USG/CloudKey", "confidence": 0.6 },
+      { "path": "/manage/site/default/dashboard", "note": "Controller UI", "confidence": 0.4 }
+    ],
+    "D-Link": [
+      { "path": "/log_manager.cgi", "note": "DIR series", "confidence": 0.7 },
+      { "path": "/cgi-bin/logs.cgi", "note": "Some DSL models", "confidence": 0.6 },
+      { "path": "/bsc_syslog.php", "note": "Older D-Link", "confidence": 0.5 }
+    ],
+    "Huawei": [
+      { "path": "/html/diagnosis/log/systemlog.html", "note": "HG8 series", "confidence": 0.5 },
+      { "path": "/asp/GetLog.asp", "note": "Some EchoLife", "confidence": 0.4 }
+    ],
+    "Xiaomi": [
+      { "path": "/cgi-bin/luci/api/xqsystem/get_sys_info", "note": "MiWiFi API", "confidence": 0.6 },
+      { "path": "/cgi-bin/luci/admin/status/syslog", "note": "OpenWRT base", "confidence": 0.5 }
+    ],
+    "generic": [
+      { "path": "/cgi-bin/luci/admin/status/syslog", "note": "OpenWRT (common base)", "confidence": 0.6 },
+      { "path": "/syslog.asp", "note": "Generic ASP routers", "confidence": 0.4 },
+      { "path": "/log.html", "note": "Generic HTML log page", "confidence": 0.3 },
+      { "path": "/cgi-bin/syslog.cgi", "note": "Generic CGI", "confidence": 0.3 },
+      { "path": "/status/log", "note": "Generic REST", "confidence": 0.3 }
+    ]
+  },
+  "gateway_defaults": [
+    "192.168.1.1",
+    "192.168.0.1",
+    "192.168.100.1",
+    "192.168.10.1",
+    "10.0.0.1",
+    "10.0.0.138",
+    "192.168.8.1",
+    "192.168.254.254"
+  ]
+}

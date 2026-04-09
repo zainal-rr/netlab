@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NetLab — QR SOS Bridge</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<script src="js/nav.js" defer></script>
+
+<div class="page">
+<div class="page-inner">
+
+  <div class="page-hero">
+    <h1>QR SOS Bridge</h1>
+    <p>Internet completely down? Compress logs to a QR code. Scan with mobile data for an instant diagnosis.</p>
+    
+  </div>
+
+  <!-- Steps indicator -->
+  <div class="qr-steps">
+    <div class="qr-step active" id="qr-s1">
+      <div class="qr-dot">1</div>
+      <div class="qr-step-lbl">Paste Logs</div>
+    </div>
+    <div class="qr-step" id="qr-s2">
+      <div class="qr-dot">2</div>
+      <div class="qr-step-lbl">Generate QR</div>
+    </div>
+    <div class="qr-step" id="qr-s3">
+      <div class="qr-dot">3</div>
+      <div class="qr-step-lbl">Scan with Phone</div>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="step-card" style="margin-bottom:16px;">
+    <div class="step-header">
+      <div class="step-badge">1</div>
+      <div>
+        <div class="step-title">Paste your router logs</div>
+        <div class="step-sub">Internet still working? Use the Analyzer instead. This is for when WAN is completely down.</div>
+      </div>
+    </div>
+    <textarea id="qr-input" class="log-input" style="min-height:160px;"
+      placeholder="Paste your router logs here..."></textarea>
+    <button id="qr-btn" class="btn btn-white btn-full" onclick="generateQR()">
+      Generate QR Code
+    </button>
+  </div>
+
+  <!-- QR Output -->
+  <div class="step-card hidden" id="qr-output" style="align-items:center;text-align:center;gap:20px;">
+    <div style="font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);">Your SOS QR Code</div>
+
+    <div id="qr-canvas" style="padding:16px;background:white;border-radius:var(--r);display:inline-block;"></div>
+
+    <div style="display:flex;gap:20px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px 24px;">
+      <div style="text-align:center;">
+        <div id="stat-orig" style="font-size:1rem;font-weight:700;color:var(--accent);font-family:var(--mono);">—</div>
+        <div style="font-size:0.68rem;color:var(--text3);">Original</div>
+      </div>
+      <div style="color:var(--ok);font-size:1.1rem;">→</div>
+      <div style="text-align:center;">
+        <div id="stat-enc" style="font-size:1rem;font-weight:700;color:var(--accent);font-family:var(--mono);">—</div>
+        <div style="font-size:0.68rem;color:var(--text3);">Encoded</div>
+      </div>
+    </div>
+
+    <div style="font-size:0.82rem;color:var(--text2);max-width:300px;line-height:1.7;">
+      Scan with your phone (4G/5G) →<br>
+      <span style="color:var(--accent);">Opens NetLab on your phone</span><br>
+      <span style="font-size:0.72rem;color:var(--text3);">Logs embedded in URL, analyzed automatically</span>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-ghost btn-sm" onclick="downloadQR()">💾 Download QR</button>
+      <button class="btn btn-ghost btn-sm" onclick="resetQR()">🔄 Start Over</button>
+    </div>
+
+    <div class="disclaimer-inline" style="max-width:480px;">
+      🔒 Data is encoded in the QR itself. In demo mode, nothing leaves your device.
+    </div>
+  </div>
+
+  <!-- Info cards -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
+    <div class="panel" style="padding:18px;">
+      <div style="font-weight:700;font-size:0.88rem;margin-bottom:6px;">📏 QR Limits</div>
+      <div style="font-size:0.8rem;color:var(--text2);line-height:1.65;">QR codes hold ~800 bytes. Only the most recent 50 lines are encoded — usually the most useful.</div>
+    </div>
+    <div class="panel" style="padding:18px;">
+      <div style="font-weight:700;font-size:0.88rem;margin-bottom:6px;">📶 When to Use This</div>
+      <div style="font-size:0.8rem;color:var(--text2);line-height:1.65;">Use the Analyzer if internet is working. QR SOS is only for when your WAN connection is completely dead.</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+let qrInstance = null;
+
+function fmt(b) { return b < 1024 ? b + ' B' : (b/1024).toFixed(1) + ' KB'; }
+
+document.getElementById('qr-input').addEventListener('input', function() {
+  const has = this.value.trim().length > 0;
+  document.getElementById('qr-s1').classList.toggle('active', !has);
+  document.getElementById('qr-s2').classList.toggle('active', has);
+  document.getElementById('qr-s3').classList.remove('active');
+});
+
+function generateQR() {
+  const text = document.getElementById('qr-input').value.trim();
+  if (!text) { alert('Please paste your logs first.'); return; }
+
+  document.getElementById('qr-btn').disabled = true;
+
+  setTimeout(() => {
+    const encoded = btoa(unescape(encodeURIComponent(text)));
+    const payload = `https://netlab.labsoft.uk/scan?data=${encoded.substring(0, 800)}`;
+
+    document.getElementById('stat-orig').textContent = fmt(new Blob([text]).size);
+    document.getElementById('stat-enc').textContent  = fmt(new Blob([encoded]).size);
+
+    const container = document.getElementById('qr-canvas');
+    container.innerHTML = '';
+
+    try {
+      new QRCode(container, { text: payload, width: 220, height: 220, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
+    } catch (e) {
+      container.innerHTML = '<p style="color:red;padding:20px;">QR error. Check CDN connection.</p>';
+    }
+
+    const out = document.getElementById('qr-output');
+    out.classList.remove('hidden');
+    out.style.display = 'flex';
+    out.style.flexDirection = 'column';
+
+    document.getElementById('qr-s3').classList.add('active');
+    document.getElementById('qr-s2').classList.remove('active');
+    document.getElementById('qr-btn').disabled = false;
+  }, 500);
+}
+
+function downloadQR() {
+  const canvas = document.querySelector('#qr-canvas canvas');
+  const img    = document.querySelector('#qr-canvas img');
+  const link   = document.createElement('a');
+  link.download = 'netlab-sos.png';
+  link.href = canvas ? canvas.toDataURL() : img?.src;
+  if (link.href) link.click();
+}
+
+function resetQR() {
+  document.getElementById('qr-output').classList.add('hidden');
+  document.getElementById('qr-input').value = '';
+  document.getElementById('qr-s1').classList.add('active');
+  document.getElementById('qr-s2').classList.remove('active');
+  document.getElementById('qr-s3').classList.remove('active');
+}
+</script>
+</body>
+</html>
